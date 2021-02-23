@@ -1,0 +1,19 @@
+version: '3.4'
+services:
+  workspace:
+    image: zeroily000/multi-sensor-fusion-for-localization:latest
+    container_name: multi-sensor-fusion-for-localization
+    privileged: true
+    environment:
+      - VNC_PASSWORD=sensorfusion
+    volumes:
+      - $PWD/../workspace:/workspace
+    ports:
+      # HTML5 VNC:
+      - 40080:80
+      # standard VNC client:
+      - 45901:5901
+      # supervisord admin:
+      - 49001:9001
+      # ROS master:
+      - 11311:11311
