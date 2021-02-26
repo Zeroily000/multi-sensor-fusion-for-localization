@@ -56,8 +56,8 @@ namespace imu_tk
   * a general 1D signal in a interval of length \f$w_s\f$ samples
   * centered in \f$t\f$.
   */
-template <typename _T> 
-  void staticIntervalsDetector ( const std::vector< TriadData_<_T> > &samples,
-                                 _T threshold, std::vector< DataInterval > &intervals,
-                                 int win_size = 101 );
+template <typename _T>
+void staticIntervalsDetector ( const std::vector< TriadData_<_T> > &samples,
+_T threshold, std::vector< DataInterval > &intervals,
+int win_size = 101 );
 }

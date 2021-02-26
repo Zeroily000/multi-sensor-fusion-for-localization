@@ -37,25 +37,25 @@
 
 namespace imu_tk
 {
-  
+
 class Plot
 {
 public:
-  Plot();
-  ~Plot(){};
-  
-  template <typename _T> 
+    Plot();
+    ~Plot(){};
+
+    template <typename _T>
     void plotSamples( const std::vector< TriadData_<_T> > &samples,
-                      DataInterval range = DataInterval() );
-  template <typename _T> 
+    DataInterval range = DataInterval() );
+    template <typename _T>
     void plotIntervals( const std::vector< TriadData_<_T> > &samples,
-                        const std::vector< DataInterval > &intervals,
-                        DataInterval range = DataInterval() );
+    const std::vector< DataInterval > &intervals,
+            DataInterval range = DataInterval() );
 private:
 
-  /* Pimpl idiom */
-  class PlotImpl; 
-  boost::shared_ptr< PlotImpl > plot_impl_ptr_;
+    /* Pimpl idiom */
+    class PlotImpl;
+    boost::shared_ptr< PlotImpl > plot_impl_ptr_;
 };
 
 void waitForKey();
@@ -64,27 +64,27 @@ void waitForKey();
 class Vis3D
 {
 public:
-  
-  Vis3D( const std::string win_name = "imu_tk" );
-  ~Vis3D(){};
-  
-  void registerFrame( std::string name, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255 );
-  void unregisterFrame( std::string name );    
-  template <typename _T> 
+
+    Vis3D( const std::string win_name = "imu_tk" );
+    ~Vis3D(){};
+
+    void registerFrame( std::string name, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255 );
+    void unregisterFrame( std::string name );
+    template <typename _T>
     void setFramePos( std::string name, const _T quat[4], const _T t[3] );
 
-  void registerLine( std::string name, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255 );
-  void unregisterLine( std::string name );    
-  template <typename _T> 
+    void registerLine( std::string name, uint8_t r = 255, uint8_t g = 255, uint8_t b = 255 );
+    void unregisterLine( std::string name );
+    template <typename _T>
     void setLinePos( std::string name, const _T p0[3], const _T p1[3] );
-    
-  void updateAndWait( int delay_ms = 0 );
-    
+
+    void updateAndWait( int delay_ms = 0 );
+
 private:
-  
-  /* Pimpl idiom */
-  class VisualizerImpl;
-  boost::shared_ptr< VisualizerImpl > vis_impl_ptr_;
+
+    /* Pimpl idiom */
+    class VisualizerImpl;
+    boost::shared_ptr< VisualizerImpl > vis_impl_ptr_;
 };
 
 
