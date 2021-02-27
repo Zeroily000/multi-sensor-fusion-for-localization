@@ -39,22 +39,17 @@ using namespace imu_tk;
 using namespace Eigen;
 using namespace std;
 
-template <typename _T1> struct MultiPosAccResidual
+template <typename T1>
+struct MultiPosAccResidual
 {
-    MultiPosAccResidual(
-            const _T1 &g_mag,
-            const Eigen::Matrix< _T1, 3 , 1> &sample
-    ) : g_mag_(g_mag), sample_(sample){}
+    MultiPosAccResidual(const T1 &g_mag, Eigen::Matrix<T1, 3 , 1> sample) : g_mag_(g_mag), sample_(std::move(sample)){}
 
-    template <typename _T2>
-    bool operator() (
-            const _T2* const params,
-            _T2* residuals
-    ) const {
-        Eigen::Matrix<_T2, 3, 1> raw_samp(
-                _T2(sample_(0)),
-                _T2(sample_(1)),
-                _T2(sample_(2))
+    template <typename T2>
+    bool operator() (const T2* const params, T2* residuals) const {
+        Eigen::Matrix<T2, 3, 1> raw_samp(
+                T2(sample_(0)),
+                T2(sample_(1)),
+                T2(sample_(2))
         );
 
         /* Apply undistortion transform to accel measurements
@@ -80,14 +75,24 @@ template <typename _T1> struct MultiPosAccResidual
 
          * assume body frame same as accelerometer frame,
          * so bottom left params in the misalignment matris are set to zero */
-        CalibratedTriad_<_T2> calib_triad(
-                //
-                // TODO: implement lower triad model here
-                //
+//        CalibratedTriad_<T2> calib_triad(
+//                //
+//                // TODO: implement lower triad model here
+//                //
+//                // mis_yz, mis_zy, mis_zx:
+//                params[0], params[1], params[2],
+//                // mis_xz, mis_xy, mis_yx:
+//                T2(0), T2(0), T2(0),
+//                //    s_x,    s_y,    s_z:
+//                params[3], params[4], params[5],
+//                //    b_x,    b_y,    b_z:
+//                params[6], params[7], params[8]
+//        );
+        CalibratedTriad_<T2> calib_triad(
                 // mis_yz, mis_zy, mis_zx:
-                params[0], params[1], params[2],
+                T2(0), T2(0), T2(0),
                 // mis_xz, mis_xy, mis_yx:
-                _T2(0), _T2(0), _T2(0),
+                params[0], params[1], params[2],
                 //    s_x,    s_y,    s_z:
                 params[3], params[4], params[5],
                 //    b_x,    b_y,    b_z:
@@ -95,58 +100,59 @@ template <typename _T1> struct MultiPosAccResidual
         );
 
         // apply undistortion transform:
-        Eigen::Matrix< _T2, 3 , 1> calib_samp = calib_triad.unbiasNormalize( raw_samp );
+        Eigen::Matrix< T2, 3 , 1> calib_samp = calib_triad.unbiasNormalize( raw_samp );
 
-        residuals[0] = _T2 (g_mag_) - calib_samp.norm();
+        residuals[0] = T2 (g_mag_) - calib_samp.norm();
 
         return true;
     }
 
-    static ceres::CostFunction* Create ( const _T1 &g_mag, const Eigen::Matrix< _T1, 3 , 1> &sample )
+    static ceres::CostFunction* Create ( const T1 &g_mag, const Eigen::Matrix< T1, 3 , 1> &sample )
     {
         return ( new ceres::AutoDiffCostFunction< MultiPosAccResidual, 1, 9 > (
-                new MultiPosAccResidual<_T1>( g_mag, sample ) ) );
+                new MultiPosAccResidual<T1>( g_mag, sample ) ) );
     }
 
-    const _T1 g_mag_;
-    const Eigen::Matrix< _T1, 3 , 1> sample_;
+    const T1 g_mag_;
+    const Eigen::Matrix< T1, 3 , 1> sample_;
 };
 
-template <typename _T1> struct MultiPosGyroResidual
+template <typename T1>
+struct MultiPosGyroResidual
 {
-    MultiPosGyroResidual( const Eigen::Matrix< _T1, 3 , 1> &g_versor_pos0,
-                          const Eigen::Matrix< _T1, 3 , 1> &g_versor_pos1,
-                          const std::vector< TriadData_<_T1> > &gyro_samples,
+    MultiPosGyroResidual( const Eigen::Matrix<T1, 3 , 1> g_versor_pos0,
+                          const Eigen::Matrix<T1, 3 , 1> g_versor_pos1,
+                          const std::vector<TriadData_<T1>> gyro_samples,
                           const DataInterval &gyro_interval_pos01,
-                          _T1 dt, bool optimize_bias) :
+                          T1 dt, bool optimize_bias) :
 
-            g_versor_pos0_(g_versor_pos0),
-            g_versor_pos1_(g_versor_pos1),
-            gyro_samples_(gyro_samples),
+            g_versor_pos0_(std::move(g_versor_pos0)),
+            g_versor_pos1_(std::move(g_versor_pos1)),
+            gyro_samples_(std::move(gyro_samples)),
             interval_pos01_(gyro_interval_pos01),
             dt_(dt), optimize_bias_(optimize_bias){}
 
-    template <typename _T2>
-    bool operator() ( const _T2* const params, _T2* residuals ) const
+    template <typename T2>
+    bool operator() ( const T2* const params, T2* residuals ) const
     {
-        CalibratedTriad_<_T2> calib_triad( params[0], params[1], params[2],
+        CalibratedTriad_<T2> calib_triad( params[0], params[1], params[2],
                                            params[3], params[4], params[5],
                                            params[6], params[7], params[8],
-                                           optimize_bias_?params[9]:_T2(0),
-                                           optimize_bias_?params[10]:_T2(0),
-                                           optimize_bias_?params[11]:_T2(0) );
+                                           optimize_bias_?params[9]:T2(0),
+                                           optimize_bias_?params[10]:T2(0),
+                                           optimize_bias_?params[11]:T2(0) );
 
-        std::vector< TriadData_<_T2> > calib_gyro_samples;
+        std::vector< TriadData_<T2> > calib_gyro_samples;
         calib_gyro_samples.reserve( interval_pos01_.end_idx - interval_pos01_.start_idx + 1 );
 
         for( int i = interval_pos01_.start_idx; i <= interval_pos01_.end_idx; i++ )
-            calib_gyro_samples.push_back( TriadData_<_T2>( calib_triad.unbiasNormalize( gyro_samples_[i] ) ) );
+            calib_gyro_samples.push_back( TriadData_<T2>( calib_triad.unbiasNormalize( gyro_samples_[i] ) ) );
 
-        Eigen::Matrix< _T2, 3 , 3> rot_mat;
-        integrateGyroInterval( calib_gyro_samples, rot_mat, _T2(dt_) );
+        Eigen::Matrix< T2, 3 , 3> rot_mat;
+        integrateGyroInterval( calib_gyro_samples, rot_mat, T2(dt_) );
 
-        Eigen::Matrix< _T2, 3 , 1> diff = rot_mat.transpose()*g_versor_pos0_.template cast<_T2>() -
-                                          g_versor_pos1_.template cast<_T2>();
+        Eigen::Matrix< T2, 3 , 1> diff = rot_mat.transpose()*g_versor_pos0_.template cast<T2>() -
+                                          g_versor_pos1_.template cast<T2>();
 
         residuals[0] = diff(0);
         residuals[1] = diff(1);
@@ -155,11 +161,11 @@ template <typename _T1> struct MultiPosGyroResidual
         return true;
     }
 
-    static ceres::CostFunction* Create ( const Eigen::Matrix< _T1, 3 , 1> &g_versor_pos0,
-                                         const Eigen::Matrix< _T1, 3 , 1> &g_versor_pos1,
-                                         const std::vector< TriadData_<_T1> > &gyro_samples,
+    static ceres::CostFunction* Create ( const Eigen::Matrix< T1, 3 , 1> &g_versor_pos0,
+                                         const Eigen::Matrix< T1, 3 , 1> &g_versor_pos1,
+                                         const std::vector< TriadData_<T1> > &gyro_samples,
                                          const DataInterval &gyro_interval_pos01,
-                                         _T1 dt, bool optimize_bias )
+                                         T1 dt, bool optimize_bias )
     {
         if( optimize_bias )
             return ( new ceres::AutoDiffCostFunction< MultiPosGyroResidual, 3, 12 > (
@@ -171,10 +177,10 @@ template <typename _T1> struct MultiPosGyroResidual
                                               gyro_interval_pos01, dt, optimize_bias ) ) );
     }
 
-    const Eigen::Matrix< _T1, 3 , 1> g_versor_pos0_, g_versor_pos1_;
-    const std::vector< TriadData_<_T1> > gyro_samples_;
+    const Eigen::Matrix< T1, 3 , 1> g_versor_pos0_, g_versor_pos1_;
+    const std::vector< TriadData_<T1> > gyro_samples_;
     const DataInterval interval_pos01_;
-    const _T1 dt_;
+    const T1 dt_;
     const bool optimize_bias_;
 };
 
@@ -218,9 +224,12 @@ bool MultiPosCalibration_<_T>::calibrateAcc(
         //
         // TODO: implement lower triad model here
         //
-        acc_calib_params[0] = init_acc_calib_.misYZ();
-        acc_calib_params[1] = init_acc_calib_.misZY();
-        acc_calib_params[2] = init_acc_calib_.misZX();
+        acc_calib_params[0] = init_acc_calib_.misXZ();
+        acc_calib_params[1] = init_acc_calib_.misXY();
+        acc_calib_params[2] = init_acc_calib_.misYX();
+//        acc_calib_params[0] = init_acc_calib_.misYZ();
+//        acc_calib_params[1] = init_acc_calib_.misZY();
+//        acc_calib_params[2] = init_acc_calib_.misZX();
 
         acc_calib_params[3] = init_acc_calib_.scaleX();
         acc_calib_params[4] = init_acc_calib_.scaleY();
@@ -287,14 +296,26 @@ bool MultiPosCalibration_<_T>::calibrateAcc(
         return false;
     }
 
+//    acc_calib_ = CalibratedTriad_<_T>(
+//            //
+//            // TODO: implement lower triad model here
+//            //
+//            min_cost_calib_params[0],
+//            min_cost_calib_params[1],
+//            min_cost_calib_params[2],
+//            0,0,0,
+//            min_cost_calib_params[3],
+//            min_cost_calib_params[4],
+//            min_cost_calib_params[5],
+//            min_cost_calib_params[6],
+//            min_cost_calib_params[7],
+//            min_cost_calib_params[8]
+//    );
     acc_calib_ = CalibratedTriad_<_T>(
-            //
-            // TODO: implement lower triad model here
-            //
+            0,0,0,
             min_cost_calib_params[0],
             min_cost_calib_params[1],
             min_cost_calib_params[2],
-            0,0,0,
             min_cost_calib_params[3],
             min_cost_calib_params[4],
             min_cost_calib_params[5],
