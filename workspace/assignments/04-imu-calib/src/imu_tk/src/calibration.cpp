@@ -43,8 +43,8 @@ using namespace std;
 class MultiPosAccCostFunction : public ceres::SizedCostFunction<1, 9> {
 public:
     MultiPosAccCostFunction(double g_square, Eigen::Vector3d sample) : m_g_square(g_square), m_sample(std::move(sample)) {}
-    virtual ~MultiPosAccCostFunction() {}
-    virtual bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const
+    ~MultiPosAccCostFunction() override = default;
+    bool Evaluate(double const *const *parameters, double *residuals, double **jacobians) const override
     {
         CalibratedTriad calib_triad(
                 0, 0, 0,
@@ -351,7 +351,7 @@ bool MultiPosCalibration_<_T>::calibrateAcc(
              << 1.0/acc_calib_.scaleY() << endl
              << 1.0/acc_calib_.scaleZ() << endl;
 
-//        waitForKey();
+        waitForKey();
     }
 
     return true;
