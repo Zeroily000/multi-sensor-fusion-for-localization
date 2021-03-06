@@ -14,8 +14,8 @@ namespace imu_integration {
 
 namespace generator {
 
-Activity::Activity(void) 
-    : private_nh_("~"), 
+Activity::Activity() :
+    private_nh_("~"),
     // standard normal distribution:
     normal_distribution_(0.0, 1.0),
     // gravity acceleration:
@@ -23,10 +23,12 @@ Activity::Activity(void)
     // angular velocity bias:
     angular_vel_bias_(0.0, 0.0, 0.0),
     // linear acceleration bias:
-    linear_acc_bias_(0.0, 0.0, 0.0)
+    linear_acc_bias_(0.0, 0.0, 0.0),
+    // output
+    result_file_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/generator.txt", std::ios::out)
 {}
 
-void Activity::Init(void) {
+void Activity::Init() {
     // parse IMU config:
     private_nh_.param("imu/device_name", imu_config_.device_name, std::string("GNSS_INS_SIM_IMU"));
     private_nh_.param("imu/topic_name", imu_config_.topic_name, std::string("/sim/sensor/imu"));
@@ -76,7 +78,7 @@ void Activity::Init(void) {
     timestamp_ = ros::Time::now();
 }
 
-void Activity::Run(void) {
+void Activity::Run() {
     // update timestamp:
     ros::Time timestamp = ros::Time::now();
     double delta_t = timestamp.toSec() - timestamp_.toSec();
@@ -93,7 +95,7 @@ void Activity::Run(void) {
     PublishMessages();
 }
 
-void Activity::GetGroundTruth(void) {
+void Activity::GetGroundTruth() {
     // acceleration:
     double timestamp_in_sec = timestamp_.toSec();
     double sin_w_xy_t = sin(kOmegaXY*timestamp_in_sec);
@@ -144,6 +146,15 @@ void Activity::GetGroundTruth(void) {
     angular_vel_ = EulerAngleRatesToBodyAngleRates(euler_angles, euler_angle_rates);
     // b. linear acceleration:
     linear_acc_ = R_gt_.transpose() * (a + G_);
+
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            result_file_ << R_gt_(i, j) << " ";
+        }
+        result_file_ << t_gt_(i);
+        if (i == 2) result_file_ << std::endl;
+        else result_file_ << " ";
+    }
 }
 
 void Activity::AddNoise(double delta_t) {
@@ -163,7 +174,7 @@ void Activity::AddNoise(double delta_t) {
     linear_acc_ += linear_acc_bias_ + linear_acc_noise;
 }
 
-void Activity::SetIMUMessage(void) {
+void Activity::SetIMUMessage() {
     // a. set header:
     message_imu_.header.stamp = timestamp_;
     message_imu_.header.frame_id = imu_config_.frame_id;
@@ -184,7 +195,7 @@ void Activity::SetIMUMessage(void) {
     message_imu_.linear_acceleration.z = linear_acc_.z();
 }
 
-void Activity::SetOdometryMessage(void) {
+void Activity::SetOdometryMessage() {
     // a. set header:
     message_odom_.header.stamp = timestamp_;
     message_odom_.header.frame_id = odom_config_.frame_id;
@@ -210,7 +221,7 @@ void Activity::SetOdometryMessage(void) {
     message_odom_.twist.twist.linear.z = v_gt_.z(); 
 }
 
-void Activity::PublishMessages(void) {
+void Activity::PublishMessages() {
     pub_imu_.publish(message_imu_);
     pub_odom_.publish(message_odom_);
 }

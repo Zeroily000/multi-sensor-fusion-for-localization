@@ -4,6 +4,7 @@
  * @Date: 2020-11-10 14:25:03
  */
 #include <cmath>
+#include <boost/filesystem.hpp>
 
 #include "imu_integration/estimator/activity.hpp"
 #include "glog/logging.h"
@@ -12,15 +13,17 @@ namespace imu_integration {
 
 namespace estimator {
 
-Activity::Activity()
-    : private_nh_("~"), 
+Activity::Activity() :
+    private_nh_("~"),
     initialized_(false),
     // gravity acceleration:
     G_(0, 0, -9.81),
     // angular velocity bias:
     angular_vel_bias_(0.0, 0.0, 0.0),
     // linear acceleration bias:
-    linear_acc_bias_(0.0, 0.0, 0.0)
+    linear_acc_bias_(0.0, 0.0, 0.0),
+    // output
+    result_file_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/estimator.txt", std::ios::out)
 {}
 
 void Activity::Init() {
@@ -144,6 +147,17 @@ bool Activity::UpdatePose() {
         // move forward -- 
         // NOTE: this is NOT fixed. you should update your buffer according to the method of your choice:
         imu_data_buff_.pop_front();
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            result_file_ << pose_(i, j);
+            if (i == 2 && j == 3) {
+                result_file_ << std::endl;
+            } else {
+                result_file_ << " ";
+            }
+        }
     }
     
     return true;

@@ -7,6 +7,8 @@
 #define IMU_INTEGRATION_ACTIVITY_HPP_
 
 // common:
+#include <fstream>
+
 #include <ros/ros.h>
 
 #include <Eigen/Dense>
@@ -128,6 +130,8 @@ private:
     Eigen::Vector3d vel_ = Eigen::Vector3d::Zero();
 
     nav_msgs::Odometry message_odom_;
+
+    std::ofstream result_file_;
 
 };
 

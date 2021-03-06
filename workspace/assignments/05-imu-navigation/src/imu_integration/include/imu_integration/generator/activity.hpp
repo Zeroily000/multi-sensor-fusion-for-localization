@@ -6,6 +6,7 @@
 #ifndef IMU_INTEGRATION_GENERATOR_ACTIVITY_HPP_
 #define IMU_INTEGRATION_GENERATOR_ACTIVITY_HPP_
 
+#include <fstream>
 #include <random>
 #include <string>
 
@@ -77,6 +78,8 @@ private:
     // ROS IMU message:
     sensor_msgs::Imu message_imu_;
     nav_msgs::Odometry message_odom_;
+
+    std::ofstream result_file_;
 };
 
 }  // namespace generator
