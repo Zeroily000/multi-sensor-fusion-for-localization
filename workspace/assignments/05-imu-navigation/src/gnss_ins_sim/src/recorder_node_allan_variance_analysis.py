@@ -11,6 +11,7 @@ import numpy as np
 
 from gnss_ins_sim.sim import imu_model
 from gnss_ins_sim.sim import ins_sim
+from gnss_ins_sim.geoparams import geoparams
 
 from std_msgs.msg import String
 from sensor_msgs.msg import Imu
@@ -79,12 +80,14 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
 
     # imu measurements:
     step_size = 1.0 / fs_imu
-    for i, (gyro, accel) in enumerate(
+    for i, (gyro, accel, ref_pos) in enumerate(
         zip(
             # a. gyro
             sim.dmgr.get_data_all('gyro').data[0], 
             # b. accel
-            sim.dmgr.get_data_all('accel').data[0]
+            sim.dmgr.get_data_all('accel').data[0],
+            # c. ref_pose
+            sim.dmgr.get_data_all('ref_pos').data
         )
     ):
         yield {
@@ -97,7 +100,11 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
                 # b. accel:
                 'accel_x': accel[0],
                 'accel_y': accel[1],
-                'accel_z': accel[2]
+                'accel_z': accel[2],
+                # c. ref_pose:
+                'ref_pos_x': ref_pos[0],
+                'ref_pos_y': ref_pos[1],
+                'ref_pos_z': ref_pos[2]
             }
         }
 
@@ -157,6 +164,16 @@ def gnss_ins_sim_recorder():
 
             # write:
             bag.write(topic_name_imu, msg, msg.header.stamp)
+
+
+            init_pose = geoparams.lla2ecef([31.224361*np.pi/180.,121.469170*np.pi/180., 0.])
+            msg = Odometry()
+            msg.header.frame_id = 'inertial'
+            msg.header.stamp = timestamp_start + rospy.Duration.from_sec(measurement['stamp'])
+            msg.pose.pose.position.x = measurement['data']['ref_pos_x'] - init_pose[0]
+            msg.pose.pose.position.y = measurement['data']['ref_pos_y'] - init_pose[1]
+            msg.pose.pose.position.z = measurement['data']['ref_pos_z'] - init_pose[2]
+            bag.write('pose/ground_truth', msg, msg.header.stamp)
 
 if __name__ == '__main__':
     try:
