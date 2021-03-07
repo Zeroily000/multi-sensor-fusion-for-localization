@@ -28,18 +28,18 @@ namespace generator {
 class Activity {
 public:
     Activity();
-    void Init(void);
-    void Run(void);
+    void Init();
+    void Run();
 private:
     // get groud truth from motion equation:
-    void GetGroundTruth(void);
+    void GetGroundTruth();
     // random walk & measurement noise generation:
     void AddNoise(double delta_t);
     // convert to ROS messages:
-    void SetIMUMessage(void);
-    void SetOdometryMessage(void);
+    void SetIMUMessage();
+    void SetOdometryMessage();
     // publish:
-    void PublishMessages(void);
+    void PublishMessages();
 
     // utilities:
     Eigen::Vector3d GetGaussianNoise(double stddev);
@@ -78,8 +78,6 @@ private:
     // ROS IMU message:
     sensor_msgs::Imu message_imu_;
     nav_msgs::Odometry message_odom_;
-
-    std::ofstream result_file_;
 };
 
 }  // namespace generator

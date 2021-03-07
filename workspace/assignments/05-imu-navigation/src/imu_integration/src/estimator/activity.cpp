@@ -23,7 +23,8 @@ Activity::Activity() :
     // linear acceleration bias:
     linear_acc_bias_(0.0, 0.0, 0.0),
     // output
-    result_file_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/estimator.txt", std::ios::out)
+    ofs_est_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/est.txt", std::ios::out),
+    ofs_gt_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/gt.txt", std::ios::out)
 {}
 
 void Activity::Init() {
@@ -84,24 +85,20 @@ bool Activity::ReadData() {
     if (static_cast<size_t>(0) == imu_data_buff_.size())
         return false;
 
-    if (!initialized_) {
-        odom_ground_truth_sub_ptr->ParseData(odom_data_buff_);
+    odom_ground_truth_sub_ptr->ParseData(odom_data_buff_);
 
-        if (static_cast<size_t>(0) == odom_data_buff_.size())
-            return false;
-    }
+    if (static_cast<size_t>(0) == odom_data_buff_.size())
+        return false;
 
     return true;
 }
 
 bool Activity::HasData() {
-    if (imu_data_buff_.size() < static_cast<size_t>(3))
+    if (imu_data_buff_.size() < static_cast<size_t>(3)) {
         return false;
+    }
 
-    if (
-        !initialized_ && 
-        static_cast<size_t>(0) == odom_data_buff_.size()
-    ) {
+    if (static_cast<size_t>(0) == odom_data_buff_.size()) {
         return false;
     }
 
@@ -109,6 +106,7 @@ bool Activity::HasData() {
 }
 
 bool Activity::UpdatePose() {
+    Eigen::Matrix4d pose_gt;
     if (!initialized_) {
         // use the latest measurement for initialization:
         OdomData &odom_data = odom_data_buff_.back();
@@ -116,6 +114,8 @@ bool Activity::UpdatePose() {
 
         pose_ = odom_data.pose;
         vel_ = odom_data.vel;
+
+        pose_gt = odom_data.pose;
 
         initialized_ = true;
 
@@ -125,9 +125,6 @@ bool Activity::UpdatePose() {
         // keep the latest IMU measurement for mid-value integration:
         imu_data_buff_.push_back(imu_data);
     } else {
-        //
-        // TODO: implement your estimation here
-        //
         // get deltas:
         Eigen::Vector3d angular_delta;
         GetAngularDelta(1, 0, angular_delta);
@@ -144,18 +141,31 @@ bool Activity::UpdatePose() {
         // update position:
         UpdatePosition(delta_t, velocity_delta);
 
+        pose_gt = odom_data_buff_.back().pose;
         // move forward -- 
         // NOTE: this is NOT fixed. you should update your buffer according to the method of your choice:
         imu_data_buff_.pop_front();
+        odom_data_buff_.pop_front();
     }
 
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 4; ++j) {
-            result_file_ << pose_(i, j);
+            ofs_est_ << pose_(i, j);
             if (i == 2 && j == 3) {
-                result_file_ << std::endl;
+                ofs_est_ << std::endl;
             } else {
-                result_file_ << " ";
+                ofs_est_ << " ";
+            }
+        }
+    }
+
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            ofs_gt_ << pose_gt(i, j);
+            if (i == 2 && j == 3) {
+                ofs_gt_ << std::endl;
+            } else {
+                ofs_gt_ << " ";
             }
         }
     }
@@ -225,11 +235,8 @@ inline Eigen::Vector3d Activity::GetUnbiasedLinearAcc(
  */
 bool Activity::GetAngularDelta(
     const size_t index_curr, const size_t index_prev,
-    Eigen::Vector3d &angular_delta
-) {
-    //
-    // TODO: this could be a helper routine for your own implementation
-    //
+    Eigen::Vector3d &angular_delta)
+{
     if (
         index_curr <= index_prev ||
         imu_data_buff_.size() <= index_curr
@@ -263,8 +270,8 @@ bool Activity::GetAngularDelta(
 bool Activity::GetVelocityDelta(
     const size_t index_curr, const size_t index_prev,
     const Eigen::Matrix3d &R_curr, const Eigen::Matrix3d &R_prev, 
-    double &delta_t, Eigen::Vector3d &velocity_delta
-) {
+    double &delta_t, Eigen::Vector3d &velocity_delta)
+{
     //
     // TODO: this could be a helper routine for your own implementation
     //

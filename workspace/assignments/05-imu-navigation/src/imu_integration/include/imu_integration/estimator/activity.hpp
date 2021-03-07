@@ -131,8 +131,8 @@ private:
 
     nav_msgs::Odometry message_odom_;
 
-    std::ofstream result_file_;
-
+    std::ofstream ofs_est_;
+    std::ofstream ofs_gt_;
 };
 
 } // namespace estimator

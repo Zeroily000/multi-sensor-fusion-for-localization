@@ -23,9 +23,7 @@ Activity::Activity() :
     // angular velocity bias:
     angular_vel_bias_(0.0, 0.0, 0.0),
     // linear acceleration bias:
-    linear_acc_bias_(0.0, 0.0, 0.0),
-    // output
-    result_file_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/generator.txt", std::ios::out)
+    linear_acc_bias_(0.0, 0.0, 0.0)
 {}
 
 void Activity::Init() {
@@ -146,15 +144,6 @@ void Activity::GetGroundTruth() {
     angular_vel_ = EulerAngleRatesToBodyAngleRates(euler_angles, euler_angle_rates);
     // b. linear acceleration:
     linear_acc_ = R_gt_.transpose() * (a + G_);
-
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            result_file_ << R_gt_(i, j) << " ";
-        }
-        result_file_ << t_gt_(i);
-        if (i == 2) result_file_ << std::endl;
-        else result_file_ << " ";
-    }
 }
 
 void Activity::AddNoise(double delta_t) {
