@@ -12,4 +12,4 @@ docker-compose up
 ```
 
 ## Open the workspace
-Open the URL `http://localhost:49001` in the browser with password `sensorfusion`
+Open the URL `http://localhost:40080` in the browser with password `sensorfusion`
