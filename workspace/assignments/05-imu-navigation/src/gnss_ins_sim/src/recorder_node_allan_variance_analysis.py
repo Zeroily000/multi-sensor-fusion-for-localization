@@ -21,9 +21,6 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
     '''
     Generate simulated GNSS/IMU data using specified trajectory.
     '''
-    # set IMU model:
-    D2R = math.pi/180.0
-    # imu_err = 'low-accuracy'
     imu_err = {
         # 1. gyro:
         # a. random noise:
@@ -54,6 +51,9 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
         'mag_hi': np.array([10.0, 10.0, 10.0])*0.0,
         'mag_std': np.array([0.1, 0.1, 0.1])
     }
+    init_state = np.genfromtxt(motion_def_file, delimiter=',', skip_header=True, max_rows=1)
+    init_pos = geoparams.lla2ecef([np.deg2rad(init_state[0]),np.deg2rad(init_state[1]), init_state[2]])
+
     # generate GPS and magnetometer data:
     imu = imu_model.IMU(accuracy=imu_err, axis=9, gps=True)
 
@@ -80,14 +80,18 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
 
     # imu measurements:
     step_size = 1.0 / fs_imu
-    for i, (gyro, accel, ref_pos) in enumerate(
+    for i, (gyro, accel, ref_pos, ref_vel, ref_att_quat) in enumerate(
         zip(
             # a. gyro
-            sim.dmgr.get_data_all('gyro').data[0], 
+            sim.dmgr.get_data_all('ref_gyro').data,
             # b. accel
-            sim.dmgr.get_data_all('accel').data[0],
-            # c. ref_pose
-            sim.dmgr.get_data_all('ref_pos').data
+            sim.dmgr.get_data_all('ref_accel').data,
+            # c. ref_pos
+            sim.dmgr.get_data_all('ref_pos').data,
+            # d. ref_vel
+            sim.dmgr.get_data_all('ref_vel').data,
+            # e. ref_att_quat
+            sim.dmgr.get_data_all('ref_att_quat').data
         )
     ):
         yield {
@@ -101,10 +105,15 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
                 'accel_x': accel[0],
                 'accel_y': accel[1],
                 'accel_z': accel[2],
-                # c. ref_pose:
-                'ref_pos_x': ref_pos[0],
-                'ref_pos_y': ref_pos[1],
-                'ref_pos_z': ref_pos[2]
+                # c. ref_pos:
+                'ref_pos_x': ref_pos[0] - init_pos[0],
+                'ref_pos_y': ref_pos[1] - init_pos[1],
+                'ref_pos_z': ref_pos[2] - init_pos[2],
+                # d. ref_att_quat:
+                'ref_att_quat_w': ref_att_quat[0],
+                'ref_att_quat_x': ref_att_quat[1],
+                'ref_att_quat_y': ref_att_quat[2],
+                'ref_att_quat_z': ref_att_quat[3]
             }
         }
 
@@ -125,9 +134,7 @@ def gnss_ins_sim_recorder():
     rosbag_output_name = rospy.get_param('/gnss_ins_sim_recorder_node/output_name')
 
     # generate simulated data:
-    motion_def_path = os.path.join(
-        rospkg.RosPack().get_path('gnss_ins_sim'), 'config', 'motion_def', motion_def_name
-    )
+    motion_def_path = os.path.join(rospkg.RosPack().get_path('gnss_ins_sim'), 'config', 'motion_def', motion_def_name)
     imu_simulator = get_gnss_ins_sim(
         # motion def file:
         motion_def_path,
@@ -137,9 +144,7 @@ def gnss_ins_sim_recorder():
         sample_freq_gps
     )
 
-    with rosbag.Bag(
-        os.path.join(rosbag_output_path, rosbag_output_name), 'w'
-    ) as bag:
+    with rosbag.Bag(os.path.join(rosbag_output_path, rosbag_output_name), 'w') as bag:
         # get timestamp base:
         timestamp_start = rospy.Time.now()
 
@@ -165,15 +170,23 @@ def gnss_ins_sim_recorder():
             # write:
             bag.write(topic_name_imu, msg, msg.header.stamp)
 
-
-            init_pose = geoparams.lla2ecef([31.224361*np.pi/180.,121.469170*np.pi/180., 0.])
+            # ground truth:
             msg = Odometry()
+            # a. set header:
             msg.header.frame_id = 'inertial'
             msg.header.stamp = timestamp_start + rospy.Duration.from_sec(measurement['stamp'])
-            msg.pose.pose.position.x = measurement['data']['ref_pos_x'] - init_pose[0]
-            msg.pose.pose.position.y = measurement['data']['ref_pos_y'] - init_pose[1]
-            msg.pose.pose.position.z = measurement['data']['ref_pos_z'] - init_pose[2]
-            bag.write('pose/ground_truth', msg, msg.header.stamp)
+            # b. set position:
+            msg.pose.pose.position.x = measurement['data']['ref_pos_x']
+            msg.pose.pose.position.y = measurement['data']['ref_pos_y']
+            msg.pose.pose.position.z = measurement['data']['ref_pos_z']
+            # c. set orientation:
+            msg.pose.pose.orientation.x = measurement['data']['ref_att_quat_x']
+            msg.pose.pose.orientation.y = measurement['data']['ref_att_quat_y']
+            msg.pose.pose.orientation.z = measurement['data']['ref_att_quat_z']
+            msg.pose.pose.orientation.w = measurement['data']['ref_att_quat_w']
+
+            # write:
+            bag.write('/pose/ground_truth', msg, msg.header.stamp)
 
 if __name__ == '__main__':
     try:

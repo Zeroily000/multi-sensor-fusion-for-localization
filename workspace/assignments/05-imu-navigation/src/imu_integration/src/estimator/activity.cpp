@@ -221,8 +221,8 @@ inline Eigen::Vector3d Activity::GetUnbiasedAngularVel(const Eigen::Vector3d &an
  */
 inline Eigen::Vector3d Activity::GetUnbiasedLinearAcc(
     const Eigen::Vector3d &linear_acc,
-    const Eigen::Matrix3d &R
-) {
+    const Eigen::Matrix3d &R)
+{
     return R*(linear_acc - linear_acc_bias_) - G_;
 }
 
@@ -252,8 +252,8 @@ bool Activity::GetAngularDelta(
     Eigen::Vector3d angular_vel_curr = GetUnbiasedAngularVel(imu_data_curr.angular_velocity);
     Eigen::Vector3d angular_vel_prev = GetUnbiasedAngularVel(imu_data_prev.angular_velocity);
 
-    angular_delta = 0.5*delta_t*(angular_vel_curr + angular_vel_prev);
-//    angular_delta = delta_t*angular_vel_curr;
+//    angular_delta = 0.5*delta_t*(angular_vel_curr + angular_vel_prev);
+    angular_delta = delta_t*angular_vel_curr;
 
     return true;
 }
@@ -272,9 +272,6 @@ bool Activity::GetVelocityDelta(
     const Eigen::Matrix3d &R_curr, const Eigen::Matrix3d &R_prev, 
     double &delta_t, Eigen::Vector3d &velocity_delta)
 {
-    //
-    // TODO: this could be a helper routine for your own implementation
-    //
     if (
         index_curr <= index_prev ||
         imu_data_buff_.size() <= index_curr
@@ -290,8 +287,8 @@ bool Activity::GetVelocityDelta(
     Eigen::Vector3d linear_acc_curr = GetUnbiasedLinearAcc(imu_data_curr.linear_acceleration, R_curr);
     Eigen::Vector3d linear_acc_prev = GetUnbiasedLinearAcc(imu_data_prev.linear_acceleration, R_prev);
     
-    velocity_delta = 0.5*delta_t*(linear_acc_curr + linear_acc_prev);
-//    velocity_delta = delta_t*linear_acc_curr;
+//    velocity_delta = 0.5*delta_t*(linear_acc_curr + linear_acc_prev);
+    velocity_delta = delta_t*linear_acc_curr;
 
     return true;
 }
@@ -305,11 +302,8 @@ bool Activity::GetVelocityDelta(
  */
 void Activity::UpdateOrientation(
     const Eigen::Vector3d &angular_delta,
-    Eigen::Matrix3d &R_curr, Eigen::Matrix3d &R_prev
-) {
-    //
-    // TODO: this could be a helper routine for your own implementation
-    //
+    Eigen::Matrix3d &R_curr, Eigen::Matrix3d &R_prev)
+{
     // magnitude:
     double angular_delta_mag = angular_delta.norm();
     // direction:
