@@ -131,6 +131,8 @@ private:
 
     nav_msgs::Odometry message_odom_;
 
+    std::string result_folder_;
+
     std::ofstream ofs_est_;
     std::ofstream ofs_gt_;
 };

@@ -80,7 +80,7 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
 
     # imu measurements:
     step_size = 1.0 / fs_imu
-    for i, (gyro, accel, ref_pos, ref_vel, ref_att_quat) in enumerate(
+    for i, (gyro, accel, ref_pos, ref_att_quat, ref_vel) in enumerate(
         zip(
             # a. gyro
             sim.dmgr.get_data_all('ref_gyro').data,
@@ -88,10 +88,10 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
             sim.dmgr.get_data_all('ref_accel').data,
             # c. ref_pos
             sim.dmgr.get_data_all('ref_pos').data,
-            # d. ref_vel
-            sim.dmgr.get_data_all('ref_vel').data,
-            # e. ref_att_quat
-            sim.dmgr.get_data_all('ref_att_quat').data
+            # d. ref_att_quat
+            sim.dmgr.get_data_all('ref_att_quat').data,
+            # e. ref_vel
+            sim.dmgr.get_data_all('ref_vel').data
         )
     ):
         yield {
@@ -113,7 +113,11 @@ def get_gnss_ins_sim(motion_def_file, fs_imu, fs_gps):
                 'ref_att_quat_w': ref_att_quat[0],
                 'ref_att_quat_x': ref_att_quat[1],
                 'ref_att_quat_y': ref_att_quat[2],
-                'ref_att_quat_z': ref_att_quat[3]
+                'ref_att_quat_z': ref_att_quat[3],
+                # e. ref_vel:
+                'ref_vel_x': ref_vel[0],
+                'ref_vel_y': ref_vel[1],
+                'ref_vel_z': ref_vel[2],
             }
         }
 
@@ -180,10 +184,14 @@ def gnss_ins_sim_recorder():
             msg.pose.pose.position.y = measurement['data']['ref_pos_y']
             msg.pose.pose.position.z = measurement['data']['ref_pos_z']
             # c. set orientation:
+            msg.pose.pose.orientation.w = measurement['data']['ref_att_quat_w']
             msg.pose.pose.orientation.x = measurement['data']['ref_att_quat_x']
             msg.pose.pose.orientation.y = measurement['data']['ref_att_quat_y']
             msg.pose.pose.orientation.z = measurement['data']['ref_att_quat_z']
-            msg.pose.pose.orientation.w = measurement['data']['ref_att_quat_w']
+            # d. set velocity:
+            msg.twist.twist.linear.x = measurement['data']['ref_vel_x']
+            msg.twist.twist.linear.y = measurement['data']['ref_vel_y']
+            msg.twist.twist.linear.z = measurement['data']['ref_vel_z']
 
             # write:
             bag.write('/pose/ground_truth', msg, msg.header.stamp)

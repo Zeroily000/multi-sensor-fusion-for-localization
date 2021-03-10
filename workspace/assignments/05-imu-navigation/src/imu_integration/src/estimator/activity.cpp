@@ -22,9 +22,8 @@ Activity::Activity() :
     angular_vel_bias_(0.0, 0.0, 0.0),
     // linear acceleration bias:
     linear_acc_bias_(0.0, 0.0, 0.0),
-    // output
-    ofs_est_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/est.txt", std::ios::out),
-    ofs_gt_("/workspace/assignments/05-imu-navigation/src/imu_integration/result/gt.txt", std::ios::out)
+    // result
+    result_folder_("/workspace/assignments/05-imu-navigation/result/")
 {}
 
 void Activity::Init() {
@@ -63,6 +62,17 @@ void Activity::Init() {
 
     odom_ground_truth_sub_ptr = std::make_shared<OdomSubscriber>(private_nh_, odom_config_.topic_name.ground_truth, 1000000);
     odom_estimation_pub_ = private_nh_.advertise<nav_msgs::Odometry>(odom_config_.topic_name.estimation, 500);
+
+    // result
+    std::string file_name;
+    private_nh_.param("result/file_name", file_name, std::string("result"));
+    if (!boost::filesystem::is_directory(result_folder_)) {
+        boost::filesystem::create_directory(result_folder_);
+    }
+
+    ofs_est_.open(result_folder_ + file_name + "_est.txt", std::ofstream::out);
+    ofs_gt_.open(result_folder_ + file_name + "_gt.txt", std::ofstream::out);
+
 }
 
 bool Activity::Run() {
@@ -209,7 +219,8 @@ bool Activity::PublishPose() {
  * @param  angular_vel, angular velocity measurement
  * @return unbiased angular velocity in body frame
  */
-inline Eigen::Vector3d Activity::GetUnbiasedAngularVel(const Eigen::Vector3d &angular_vel) {
+inline Eigen::Vector3d Activity::GetUnbiasedAngularVel(const Eigen::Vector3d &angular_vel)
+{
     return angular_vel - angular_vel_bias_;
 }
 
@@ -252,8 +263,8 @@ bool Activity::GetAngularDelta(
     Eigen::Vector3d angular_vel_curr = GetUnbiasedAngularVel(imu_data_curr.angular_velocity);
     Eigen::Vector3d angular_vel_prev = GetUnbiasedAngularVel(imu_data_prev.angular_velocity);
 
-//    angular_delta = 0.5*delta_t*(angular_vel_curr + angular_vel_prev);
-    angular_delta = delta_t*angular_vel_curr;
+    angular_delta = 0.5*delta_t*(angular_vel_curr + angular_vel_prev);
+//    angular_delta = delta_t*angular_vel_curr;
 
     return true;
 }
@@ -287,8 +298,8 @@ bool Activity::GetVelocityDelta(
     Eigen::Vector3d linear_acc_curr = GetUnbiasedLinearAcc(imu_data_curr.linear_acceleration, R_curr);
     Eigen::Vector3d linear_acc_prev = GetUnbiasedLinearAcc(imu_data_prev.linear_acceleration, R_prev);
     
-//    velocity_delta = 0.5*delta_t*(linear_acc_curr + linear_acc_prev);
-    velocity_delta = delta_t*linear_acc_curr;
+    velocity_delta = 0.5*delta_t*(linear_acc_curr + linear_acc_prev);
+//    velocity_delta = delta_t*linear_acc_curr;
 
     return true;
 }
@@ -335,10 +346,8 @@ void Activity::UpdateOrientation(
  * @param  velocity_delta, effective velocity change
  * @return void
  */
-void Activity::UpdatePosition(const double &delta_t, const Eigen::Vector3d &velocity_delta) {
-    //
-    // TODO: this could be a helper routine for your own implementation
-    //
+void Activity::UpdatePosition(const double &delta_t, const Eigen::Vector3d &velocity_delta)
+{
     pose_.block<3, 1>(0, 3) += delta_t*vel_ + 0.5*delta_t*velocity_delta;
     vel_ += velocity_delta;
 }
