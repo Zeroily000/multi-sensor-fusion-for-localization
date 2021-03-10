@@ -186,9 +186,6 @@ target_link_libraries(generator_node
   ${catkin_LIBRARIES}
 )
 
-## Output directory
-file(MAKE_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/result)
-
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
 ## target back to the shorter version for ease of user use
