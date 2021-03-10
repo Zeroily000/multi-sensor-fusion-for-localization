@@ -1,7 +1,7 @@
 <launch>
     <node pkg="tf" type="static_transform_publisher" name="ENU_broadcaster" args="0 0 0 0 0 0 inertial ENU 200" />
 
-    <node pkg="rosbag" type="play" name="rosbag_play" args="/workspace/data/gnss_ins_sim/allan_variance_analysis/acceleration.bag"/>
+    <node pkg="rosbag" type="play" name="rosbag_play" args="/workspace/data/gnss_ins_sim/acceleration.bag"/>
 
     <node pkg="imu_integration" type="estimator_node" name="imu_integration_estimator_node" clear_params="true">
         <!-- load default params -->

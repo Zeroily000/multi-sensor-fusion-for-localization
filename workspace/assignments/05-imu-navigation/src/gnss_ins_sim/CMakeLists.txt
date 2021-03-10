@@ -163,9 +163,7 @@ include_directories(
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
 catkin_install_python(PROGRAMS
-  src/publisher_node.py
   src/recorder_node_allan_variance_analysis.py
-  src/recorder_node_deterministic_error.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

@@ -148,6 +148,10 @@ def gnss_ins_sim_recorder():
         sample_freq_gps
     )
 
+    # save simulated data to a ROS bag
+    if not os.path.exists(rosbag_output_path):
+        os.makedirs(rosbag_output_path)
+
     with rosbag.Bag(os.path.join(rosbag_output_path, rosbag_output_name), 'w') as bag:
         # get timestamp base:
         timestamp_start = rospy.Time.now()
