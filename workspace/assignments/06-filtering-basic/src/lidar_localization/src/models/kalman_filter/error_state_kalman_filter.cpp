@@ -547,15 +547,18 @@ void ErrorStateKalmanFilter::UpdateOdomEstimation(
 void ErrorStateKalmanFilter::SetProcessEquation(const Eigen::Matrix3d &C_nb,
                                                 const Eigen::Vector3d &f_n,
                                                 const Eigen::Vector3d &w_b) {
-    // a. set process equation for delta vel:
-    F_.block<3, 3>(INDEX_ERROR_VEL, INDEX_ERROR_ORI) =
-            -C_nb * Sophus::SO3d::hat(f_n).matrix();
+    // a. set process equation for delta pos:
+    F_.block<3, 3>(INDEX_ERROR_POS, INDEX_ERROR_VEL) = Eigen::Matrix3d::Identity();
+    // b. set process equation for delta vel:
+    F_.block<3, 3>(INDEX_ERROR_VEL, INDEX_ERROR_ORI) = -C_nb * Sophus::SO3d::hat(f_n).matrix();
     F_.block<3, 3>(INDEX_ERROR_VEL, INDEX_ERROR_ACCEL) = -C_nb;
-    // b. set process equation for delta ori:
-    F_.block<3, 3>(INDEX_ERROR_ORI, INDEX_ERROR_ORI) =
-            -Sophus::SO3d::hat(w_b).matrix();
+    // c. set process equation for delta ori:
+    F_.block<3, 3>(INDEX_ERROR_ORI, INDEX_ERROR_ORI) = -Sophus::SO3d::hat(w_b).matrix();
+    F_.block<3, 3>(INDEX_ERROR_ORI, INDEX_ERROR_GYRO) = -Eigen::Matrix3d::Identity();
+
     B_.block<3, 3>(INDEX_ERROR_VEL, 0) = C_nb;
     B_.block<9, 9>(INDEX_ERROR_ORI, INDEX_ERROR_VEL).setIdentity();
+//    B_.block<3, 3>(INDEX_ERROR_ORI, INDEX_ERROR_VEL).setIdentity();
 }
 
 /**
@@ -595,7 +598,6 @@ void ErrorStateKalmanFilter::UpdateErrorEstimation(
     // approximate to 2nd order:
     MatrixF F = MatrixF::Identity() + F_1st + F_2nd;
     MatrixB B = T * B_;
-    B.block<6, 6>(6, 6) = Eigen::Matrix<double, 6, 6>::Identity() * sqrt(T);
 
     //
     // TODO: perform Kalman prediction
@@ -674,10 +676,10 @@ void ErrorStateKalmanFilter::EliminateError(void) {
     // a. position:
     pose_.block<3, 1>(0, 3) -= X_.block<3, 1>(INDEX_ERROR_POS, 0); // fix this
     // b. velocity:
-    vel_ -= X_.block<3, 1>(INDEX_ERROR_VEL, 0);; // fix this
+    vel_ -= X_.block<3, 1>(INDEX_ERROR_VEL, 0); // fix this
     // c. orientation:
     Eigen::Matrix3d C_nn = Eigen::Matrix3d::Identity() - Sophus::SO3d::hat( X_.block<3, 1>(INDEX_ERROR_ORI, 0) ).matrix();
-    pose_.block<3, 3>(0, 0) *= C_nn; // fix this
+    pose_.block<3, 3>(0, 0) = pose_.block<3, 3>(0, 0) * C_nn; // fix this
 
     // d. gyro bias:
     if (IsCovStable(INDEX_ERROR_GYRO)) {
