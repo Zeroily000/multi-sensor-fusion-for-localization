@@ -71,6 +71,12 @@ bool GNSSINSSimFiltering::Correct(
     current_measurement_.v_b = pos_vel_mag_data.vel.cast<double>();
     current_measurement_.B_b = pos_vel_mag_data.mag.cast<double>();
 
+    current_measurement_.w_b = Eigen::Vector3d(
+            imu_data.angular_velocity.x,
+            imu_data.angular_velocity.y,
+            imu_data.angular_velocity.z
+    );
+
     if (
         kalman_filter_ptr_->Correct(
             imu_data,

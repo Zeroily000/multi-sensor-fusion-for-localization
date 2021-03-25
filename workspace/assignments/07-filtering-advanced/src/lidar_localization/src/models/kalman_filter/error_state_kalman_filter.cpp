@@ -50,7 +50,7 @@ ErrorStateKalmanFilter::ErrorStateKalmanFilter(const YAML::Node& node) {
     MOTION_CONSTRAINT.W_B_THRESH = node["motion_constraint"]["w_b_thresh"].as<double>();
 
     // prompt:
-    LOG(INFO) << std::endl 
+    LOG(INFO) << std::endl
               << "Error-State Kalman Filter params:" << std::endl
               << "\tgravity magnitude: " << EARTH.GRAVITY_MAGNITUDE << std::endl
               << "\tearth rotation speed: " << EARTH.ROTATION_SPEED << std::endl
@@ -65,29 +65,29 @@ ErrorStateKalmanFilter::ErrorStateKalmanFilter(const YAML::Node& node) {
               << "\tprocess noise gyro.: " << COV.PROCESS.GYRO << std::endl
               << "\tprocess noise accel.: " << COV.PROCESS.ACCEL << std::endl
               << std::endl
-              << "\tmeasurement noise pose.: " << std::endl 
+              << "\tmeasurement noise pose.: " << std::endl
               << "\t\tpos: " << COV.MEASUREMENT.POSE.POSI << ", ori.: " << COV.MEASUREMENT.POSE.ORI << std::endl
               << "\tmeasurement noise pos.: " << COV.MEASUREMENT.POSI << std::endl
               << "\tmeasurement noise vel.: " << COV.MEASUREMENT.VEL << std::endl
               << std::endl
-              << "\tmotion constraint: " << std::endl 
+              << "\tmotion constraint: " << std::endl
               << "\t\tactivated: " << (MOTION_CONSTRAINT.ACTIVATED ? "true" : "false") << std::endl
               << "\t\tw_b threshold: " << MOTION_CONSTRAINT.W_B_THRESH << std::endl
               << std::endl;
-    
+
     //
     // init filter:
     //
     // a. earth constants:
     g_ = Eigen::Vector3d(
-        0.0, 
-        0.0, 
-        EARTH.GRAVITY_MAGNITUDE
+            0.0,
+            0.0,
+            EARTH.GRAVITY_MAGNITUDE
     );
     w_ = Eigen::Vector3d(
-        0.0,
-        EARTH.ROTATION_SPEED*cos(EARTH.LATITUDE),
-        EARTH.ROTATION_SPEED*sin(EARTH.LATITUDE)
+            0.0,
+            EARTH.ROTATION_SPEED*cos(EARTH.LATITUDE),
+            EARTH.ROTATION_SPEED*sin(EARTH.LATITUDE)
     );
     // b. prior state & covariance:
     ResetState();
@@ -137,10 +137,10 @@ ErrorStateKalmanFilter::ErrorStateKalmanFilter(const YAML::Node& node) {
     CPosiVel_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
     CPosiVel_.block<3, 3>(3, 3) = Eigen::Matrix3d::Identity();
 
-    GPosiVelCons_.block<4, DIM_STATE>(0, 0) = GPosiVel_.block<4, DIM_STATE>(0, 0);
-    GPosiVelCons_.block<1, DIM_STATE>(4, 0) = GPosiVel_.block<1, DIM_STATE>(5, 0);
-    CPosiVelCons_.block<4, 4>(0, 0) = Eigen::Matrix4d::Identity();
-    CPosiVelCons_(4, 5) = 1.0;
+    GPosiVelCons_.block<3, DIM_STATE>(0, 0) = GPosiVel_.block<3, DIM_STATE>(0, 0);
+    GPosiVelCons_.block<2, DIM_STATE>(3, 0) = GPosiVel_.block<2, DIM_STATE>(4, 0);
+    CPosiVelCons_.block<3, 3>(0, 0) = Eigen::Matrix3d::Identity();
+    CPosiVelCons_.block<2, 2>(3, 4) = Eigen::Matrix2d::Identity();
 
     // init soms:
     QPose_.block<DIM_MEASUREMENT_POSE, DIM_STATE>(0, 0) = GPose_;
@@ -157,8 +157,8 @@ ErrorStateKalmanFilter::ErrorStateKalmanFilter(const YAML::Node& node) {
  * @return true if success false otherwise
  */
 void ErrorStateKalmanFilter::Init(
-    const Eigen::Vector3d &vel,
-    const IMUData &imu_data
+        const Eigen::Vector3d &vel,
+        const IMUData &imu_data
 ) {
     // init odometry:
     Eigen::Matrix3d C_nb = imu_data.GetOrientationMatrix().cast<double>();
@@ -179,9 +179,9 @@ void ErrorStateKalmanFilter::Init(
 
     // set process equation in case of one step prediction & correction:
     Eigen::Vector3d linear_acc_init(
-        imu_data.linear_acceleration.x,
-        imu_data.linear_acceleration.y,
-        imu_data.linear_acceleration.z
+            imu_data.linear_acceleration.x,
+            imu_data.linear_acceleration.y,
+            imu_data.linear_acceleration.z
     );
     // covert to navigation frame:
     linear_acc_init = C_nb * (linear_acc_init - accl_bias_);
@@ -189,9 +189,9 @@ void ErrorStateKalmanFilter::Init(
     // init process equation, in case of direct correct step:
     UpdateProcessEquation(linear_acc_init);
 
-    LOG(INFO) << std::endl 
+    LOG(INFO) << std::endl
               << "Kalman Filter Inited at " << static_cast<int>(time_) << std::endl
-              << "Init Position: " 
+              << "Init Position: "
               << pose_(0, 3) << ", "
               << pose_(1, 3) << ", "
               << pose_(2, 3) << std::endl
@@ -218,7 +218,7 @@ bool ErrorStateKalmanFilter::Update(const IMUData &imu_data) {
         // update error estimation:
         double T = imu_data.time - time_;
         UpdateErrorEstimation(T, linear_acc_mid);
-        
+
         // move forward:
         time_ = imu_data.time;
 
@@ -235,9 +235,9 @@ bool ErrorStateKalmanFilter::Update(const IMUData &imu_data) {
  * @return void                                   
  */
 bool ErrorStateKalmanFilter::Correct(
-    const IMUData &imu_data, 
-    const MeasurementType &measurement_type, const Measurement &measurement
-) { 
+        const IMUData &imu_data,
+        const MeasurementType &measurement_type, const Measurement &measurement
+) {
     static Measurement measurement_;
 
     // get time delta:
@@ -264,14 +264,14 @@ bool ErrorStateKalmanFilter::Correct(
 
         // apply motion constraint:
         if ( !IsTurning(measurement_.w_b) && MOTION_CONSTRAINT.ACTIVATED ) ApplyMotionConstraint();
-        
+
         return true;
     }
 
-    LOG(INFO) << "ESKF Correct: Observation is not synced with filter. Skip, " 
+    LOG(INFO) << "ESKF Correct: Observation is not synced with filter. Skip, "
               << (int)measurement.time << " <-- " << (int)time_ << " @ " << time_delta
-              << std::endl; 
-    
+              << std::endl;
+
     return false;
 }
 
@@ -282,7 +282,7 @@ bool ErrorStateKalmanFilter::Correct(
  * @return void
  */
 void ErrorStateKalmanFilter::GetOdometry(
-    Eigen::Matrix4f &pose, Eigen::Vector3f &vel
+        Eigen::Matrix4f &pose, Eigen::Vector3f &vel
 ) {
     // init:
     Eigen::Matrix4d pose_double = pose_;
@@ -348,8 +348,8 @@ void ErrorStateKalmanFilter::GetCovariance(Cov &cov) {
  * @return unbiased angular velocity in body frame
  */
 inline Eigen::Vector3d ErrorStateKalmanFilter::GetUnbiasedAngularVel(
-    const Eigen::Vector3d &angular_vel,
-    const Eigen::Matrix3d &R
+        const Eigen::Vector3d &angular_vel,
+        const Eigen::Matrix3d &R
 ) {
     return angular_vel - gyro_bias_ - R.transpose() * w_;
 }
@@ -361,8 +361,8 @@ inline Eigen::Vector3d ErrorStateKalmanFilter::GetUnbiasedAngularVel(
  * @return unbiased linear acceleration in navigation frame
  */
 inline Eigen::Vector3d ErrorStateKalmanFilter::GetUnbiasedLinearAcc(
-    const Eigen::Vector3d &linear_acc,
-    const Eigen::Matrix3d &R
+        const Eigen::Vector3d &linear_acc,
+        const Eigen::Matrix3d &R
 ) {
     return R*(linear_acc - accl_bias_) - g_;
 }
@@ -387,10 +387,10 @@ void ErrorStateKalmanFilter::ApplyMotionConstraint(void) {
  */
 bool ErrorStateKalmanFilter::IsTurning(const Eigen::Vector3d &w_b) {
     Eigen::Vector3d w_b_unbiased = GetUnbiasedAngularVel(
-        w_b, pose_.block<3, 3>(0, 0)
+            w_b, pose_.block<3, 3>(0, 0)
     );
 
-    // TODO: move this to config 
+    // TODO: move this to config
     return w_b_unbiased.norm() > MOTION_CONSTRAINT.W_B_THRESH;
 }
 
@@ -402,13 +402,13 @@ bool ErrorStateKalmanFilter::IsTurning(const Eigen::Vector3d &w_b) {
  * @return true if success false otherwise
  */
 bool ErrorStateKalmanFilter::GetAngularDelta(
-    const size_t index_curr, const size_t index_prev,
-    Eigen::Vector3d &angular_delta
+        const size_t index_curr, const size_t index_prev,
+        Eigen::Vector3d &angular_delta
 ) {
     if (
-        index_curr <= index_prev ||
-        imu_data_buff_.size() <= index_curr
-    ) {
+            index_curr <= index_prev ||
+            imu_data_buff_.size() <= index_curr
+            ) {
         return false;
     }
 
@@ -418,17 +418,17 @@ bool ErrorStateKalmanFilter::GetAngularDelta(
     double delta_t = imu_data_curr.time - imu_data_prev.time;
 
     Eigen::Vector3d angular_vel_curr = Eigen::Vector3d(
-        imu_data_curr.angular_velocity.x,
-        imu_data_curr.angular_velocity.y,
-        imu_data_curr.angular_velocity.z
+            imu_data_curr.angular_velocity.x,
+            imu_data_curr.angular_velocity.y,
+            imu_data_curr.angular_velocity.z
     );
     Eigen::Matrix3d R_curr = imu_data_curr.GetOrientationMatrix().cast<double>();
     angular_vel_curr = GetUnbiasedAngularVel(angular_vel_curr, R_curr);
 
     Eigen::Vector3d angular_vel_prev = Eigen::Vector3d(
-        imu_data_prev.angular_velocity.x,
-        imu_data_prev.angular_velocity.y,
-        imu_data_prev.angular_velocity.z
+            imu_data_prev.angular_velocity.x,
+            imu_data_prev.angular_velocity.y,
+            imu_data_prev.angular_velocity.z
     );
     Eigen::Matrix3d R_prev = imu_data_prev.GetOrientationMatrix().cast<double>();
     angular_vel_prev = GetUnbiasedAngularVel(angular_vel_prev, R_prev);
@@ -446,8 +446,8 @@ bool ErrorStateKalmanFilter::GetAngularDelta(
  * @return void
  */
 void ErrorStateKalmanFilter::UpdateOrientation(
-    const Eigen::Vector3d &angular_delta,
-    Eigen::Matrix3d &R_curr, Eigen::Matrix3d &R_prev
+        const Eigen::Vector3d &angular_delta,
+        Eigen::Matrix3d &R_curr, Eigen::Matrix3d &R_prev
 ) {
     // magnitude:
     double angular_delta_mag = angular_delta.norm();
@@ -458,16 +458,16 @@ void ErrorStateKalmanFilter::UpdateOrientation(
     double angular_delta_cos = cos(angular_delta_mag/2.0);
     double angular_delta_sin = sin(angular_delta_mag/2.0);
     Eigen::Quaterniond dq(
-        angular_delta_cos, 
-        angular_delta_sin*angular_delta_dir.x(), 
-        angular_delta_sin*angular_delta_dir.y(), 
-        angular_delta_sin*angular_delta_dir.z()
+            angular_delta_cos,
+            angular_delta_sin*angular_delta_dir.x(),
+            angular_delta_sin*angular_delta_dir.y(),
+            angular_delta_sin*angular_delta_dir.z()
     );
     Eigen::Quaterniond q(pose_.block<3, 3>(0, 0));
-    
+
     // update:
     q = q*dq;
-    
+
     // write back:
     R_prev = pose_.block<3, 3>(0, 0);
     pose_.block<3, 3>(0, 0) = q.normalized().toRotationMatrix();
@@ -485,16 +485,16 @@ void ErrorStateKalmanFilter::UpdateOrientation(
  * @return true if success false otherwise
  */
 bool ErrorStateKalmanFilter::GetVelocityDelta(
-    const size_t index_curr, const size_t index_prev,
-    const Eigen::Matrix3d &R_curr, const Eigen::Matrix3d &R_prev, 
-    double &T, 
-    Eigen::Vector3d &velocity_delta, 
-    Eigen::Vector3d &linear_acc_mid
+        const size_t index_curr, const size_t index_prev,
+        const Eigen::Matrix3d &R_curr, const Eigen::Matrix3d &R_prev,
+        double &T,
+        Eigen::Vector3d &velocity_delta,
+        Eigen::Vector3d &linear_acc_mid
 ) {
     if (
-        index_curr <= index_prev ||
-        imu_data_buff_.size() <= index_curr
-    ) {
+            index_curr <= index_prev ||
+            imu_data_buff_.size() <= index_curr
+            ) {
         return false;
     }
 
@@ -504,18 +504,18 @@ bool ErrorStateKalmanFilter::GetVelocityDelta(
     T = imu_data_curr.time - imu_data_prev.time;
 
     Eigen::Vector3d linear_acc_curr = Eigen::Vector3d(
-        imu_data_curr.linear_acceleration.x,
-        imu_data_curr.linear_acceleration.y,
-        imu_data_curr.linear_acceleration.z
+            imu_data_curr.linear_acceleration.x,
+            imu_data_curr.linear_acceleration.y,
+            imu_data_curr.linear_acceleration.z
     );
     linear_acc_curr = GetUnbiasedLinearAcc(linear_acc_curr, R_curr);
     Eigen::Vector3d linear_acc_prev = Eigen::Vector3d(
-        imu_data_prev.linear_acceleration.x,
-        imu_data_prev.linear_acceleration.y,
-        imu_data_prev.linear_acceleration.z
+            imu_data_prev.linear_acceleration.x,
+            imu_data_prev.linear_acceleration.y,
+            imu_data_prev.linear_acceleration.z
     );
     linear_acc_prev = GetUnbiasedLinearAcc(linear_acc_prev, R_prev);
-    
+
     // mid-value acc can improve error state prediction accuracy:
     linear_acc_mid = 0.5*(linear_acc_curr + linear_acc_prev);
     velocity_delta = T*linear_acc_mid;
@@ -543,7 +543,7 @@ void ErrorStateKalmanFilter::UpdateOdomEstimation(Eigen::Vector3d &linear_acc_mi
     static Eigen::Vector3d w_b = Eigen::Vector3d::Zero();
 
     // get deltas:
-    Eigen::Vector3d angular_delta; 
+    Eigen::Vector3d angular_delta;
     GetAngularDelta(1, 0, angular_delta);
 
     // update orientation:
@@ -555,9 +555,9 @@ void ErrorStateKalmanFilter::UpdateOdomEstimation(Eigen::Vector3d &linear_acc_mi
     Eigen::Vector3d velocity_delta;
     // save mid-value unbiased linear acc for error-state update:
     GetVelocityDelta(
-        1, 0, 
-        R_curr, R_prev, 
-        T, velocity_delta, linear_acc_mid
+            1, 0,
+            R_curr, R_prev,
+            T, velocity_delta, linear_acc_mid
     );
 
     // update position:
@@ -575,7 +575,7 @@ void ErrorStateKalmanFilter::UpdateOdomEstimation(Eigen::Vector3d &linear_acc_mi
  * @return void
  */
 void ErrorStateKalmanFilter::SetProcessEquation(
-    const Eigen::Matrix3d &C_nb, const Eigen::Vector3d &f_n
+        const Eigen::Matrix3d &C_nb, const Eigen::Vector3d &f_n
 ) {
     // a. set process equation for delta vel:
     F_.block<3, 3>(INDEX_ERROR_VEL,  INDEX_ERROR_ORI) = Sophus::SO3d::hat(f_n).matrix();
@@ -592,8 +592,8 @@ void ErrorStateKalmanFilter::SetProcessEquation(
  * @return void
  */
 void ErrorStateKalmanFilter::UpdateProcessEquation(
-    const Eigen::Vector3d &linear_acc_mid
-) { 
+        const Eigen::Vector3d &linear_acc_mid
+) {
     // set linearization point:
     Eigen::Matrix3d C_nb = pose_.block<3, 3>(0, 0);
     Eigen::Vector3d f_n = linear_acc_mid + g_;
@@ -608,8 +608,8 @@ void ErrorStateKalmanFilter::UpdateProcessEquation(
  * @return void
  */
 void ErrorStateKalmanFilter::UpdateErrorEstimation(
-    const double &T,
-    const Eigen::Vector3d &linear_acc_mid
+        const double &T,
+        const Eigen::Vector3d &linear_acc_mid
 ) {
     static MatrixF F_1st;
     static MatrixF F_2nd;
@@ -635,8 +635,8 @@ void ErrorStateKalmanFilter::UpdateErrorEstimation(
  * @return void
  */
 void ErrorStateKalmanFilter::CorrectErrorEstimationPose(
-    const Eigen::Matrix4d &T_nb,
-    Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
+        const Eigen::Matrix4d &T_nb,
+        Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
 ) {
     // set measurement:
     Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
@@ -685,13 +685,13 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
     if ( !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED ) {
         // set measurement, with motion constraint:
         VectorYPoseVelCons YPoseVelCons = VectorYPoseVelCons::Zero();
-        YPoseVelCons.block<6, 1>(0, 0) = YPoseVel_.block<6, 1>(0, 0);
-        YPoseVelCons.block<2, 1>(6, 0) = YPoseVel_.block<2, 1>(7, 0);
+        YPoseVelCons.block<7, 1>(0, 0) = YPoseVel_.block<7, 1>(0, 0);
+        YPoseVelCons(7, 0) = YPoseVel_(8, 0);
 
         Y = YPoseVelCons;
 
         // set measurement equation, with motion constraint:
-        GPoseVelCons_.block<1, DIM_STATE>(6, 0) = GPoseVel_.block<1, DIM_STATE>(7, 0);
+        GPoseVelCons_.block<1, DIM_STATE>(6, 0) = GPoseVel_.block<1, DIM_STATE>(6, 0);
         GPoseVelCons_.block<1, DIM_STATE>(7, 0) = GPoseVel_.block<1, DIM_STATE>(8, 0);
 
         G = GPoseVelCons_;
@@ -712,8 +712,8 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPoseVel(
  * @return void
  */
 void ErrorStateKalmanFilter::CorrectErrorEstimationPosi(
-    const Eigen::Matrix4d &T_nb,
-    Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
+        const Eigen::Matrix4d &T_nb,
+        Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
 ) {
     // set measurement:
     Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
@@ -737,8 +737,8 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPosi(
  * @return void
  */
 void ErrorStateKalmanFilter::CorrectErrorEstimationPosiVel(
-    const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
-    Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
+        const Eigen::Matrix4d &T_nb, const Eigen::Vector3d &v_b, const Eigen::Vector3d &w_b,
+        Eigen::VectorXd &Y, Eigen::MatrixXd &G, Eigen::MatrixXd &K
 ) {
     // parse measurement:
     Eigen::Vector3d P_nn_obs = pose_.block<3, 1>(0,3) - T_nb.block<3, 1>(0,3);
@@ -758,14 +758,14 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPosiVel(
     if ( !IsTurning(w_b) && MOTION_CONSTRAINT.ACTIVATED ) {
         // set measurement, with motion constraint:
         VectorYPosiVelCons YPosiVelCons = VectorYPosiVelCons::Zero();
-        YPosiVelCons.block<4, 1>(0, 0) = YPosiVel_.block<4, 1>(0, 0);
-        YPosiVelCons(4, 0) = YPosiVel_(5, 0);
+        YPosiVelCons.block<3, 1>(0, 0) = YPosiVel_.block<3, 1>(0, 0);
+        YPosiVelCons.block<2, 1>(3, 0) = YPosiVel_.block<2, 1>(4, 0);
 
         Y = YPosiVelCons;
 
         // set measurement equation, with motion constraint:
-        GPosiVelCons_.block<1, DIM_STATE>(3, 0) = GPosiVel_.block<1, DIM_STATE>(3, 0);
-        GPosiVelCons_.block<1, DIM_STATE>(4, 0) = GPosiVel_.block<1, DIM_STATE>(5, 0);
+        GPoseVelCons_.block<3, DIM_STATE>(0, 0) = GPoseVel_.block<3, DIM_STATE>(0, 0);
+        GPosiVelCons_.block<2, DIM_STATE>(3, 0) = GPosiVel_.block<2, DIM_STATE>(4, 0);
 
         G = GPosiVelCons_;
 
@@ -786,34 +786,34 @@ void ErrorStateKalmanFilter::CorrectErrorEstimationPosiVel(
  * @return void
  */
 void ErrorStateKalmanFilter::CorrectErrorEstimation(
-    const MeasurementType &measurement_type, 
-    const Measurement &measurement
+        const MeasurementType &measurement_type,
+        const Measurement &measurement
 ) {
     Eigen::VectorXd Y;
     Eigen::MatrixXd G, K;
     switch ( measurement_type ) {
         case MeasurementType::POSE:
             CorrectErrorEstimationPose(
-                measurement.T_nb,
-                Y, G, K
+                    measurement.T_nb,
+                    Y, G, K
             );
             break;
         case MeasurementType::POSE_VEL:
             CorrectErrorEstimationPoseVel(
-                measurement.T_nb, measurement.v_b, measurement.w_b,
-                Y, G, K
+                    measurement.T_nb, measurement.v_b, measurement.w_b,
+                    Y, G, K
             );
             break;
         case MeasurementType::POSI:
             CorrectErrorEstimationPosi(
-                measurement.T_nb,
-                Y, G, K
+                    measurement.T_nb,
+                    Y, G, K
             );
             break;
         case MeasurementType::POSI_VEL:
             CorrectErrorEstimationPosiVel(
-                measurement.T_nb, measurement.v_b, measurement.w_b,
-                Y, G, K
+                    measurement.T_nb, measurement.v_b, measurement.w_b,
+                    Y, G, K
             );
         default:
             break;
@@ -842,7 +842,7 @@ void ErrorStateKalmanFilter::EliminateError(void) {
     if ( IsCovStable(INDEX_ERROR_GYRO) ) {
         gyro_bias_ += X_.block<3, 1>(INDEX_ERROR_GYRO, 0);
     }
-    
+
     // e. accel bias:
     if ( IsCovStable(INDEX_ERROR_ACCEL) ) {
         accl_bias_ += X_.block<3, 1>(INDEX_ERROR_ACCEL, 0);
@@ -856,8 +856,8 @@ void ErrorStateKalmanFilter::EliminateError(void) {
  * @return void
  */
 bool ErrorStateKalmanFilter::IsCovStable(
-    const int INDEX_OFSET,
-    const double THRESH
+        const int INDEX_OFSET,
+        const double THRESH
 ) {
     for (int i = 0; i < 3; ++i) {
         if ( P_(INDEX_OFSET + i, INDEX_OFSET + i) > THRESH ) {
@@ -885,7 +885,7 @@ void ErrorStateKalmanFilter::ResetState(void) {
  */
 void ErrorStateKalmanFilter::ResetCovariance(void) {
     P_ = MatrixP::Zero();
-    
+
     P_.block<3, 3>(  INDEX_ERROR_POS,   INDEX_ERROR_POS) = COV.PRIOR.POSI*Eigen::Matrix3d::Identity();
     P_.block<3, 3>(  INDEX_ERROR_VEL,   INDEX_ERROR_VEL) = COV.PRIOR.VEL*Eigen::Matrix3d::Identity();
     P_.block<3, 3>(  INDEX_ERROR_ORI,   INDEX_ERROR_ORI) = COV.PRIOR.ORI*Eigen::Matrix3d::Identity();
@@ -902,7 +902,7 @@ Eigen::MatrixXd ErrorStateKalmanFilter::GetQPose(void) {
     // build observability matrix for position measurement:
     for (int i = 1; i < DIM_STATE; ++i) {
         QPose_.block<DIM_MEASUREMENT_POSE, DIM_STATE>(i*DIM_MEASUREMENT_POSE, 0) = (
-            QPose_.block<DIM_MEASUREMENT_POSE, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSE, 0) * F_
+                QPose_.block<DIM_MEASUREMENT_POSE, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSE, 0) * F_
         );
     }
 
@@ -919,7 +919,7 @@ Eigen::MatrixXd ErrorStateKalmanFilter::GetQPoseVel(void) {
     QPoseVel_.block<DIM_MEASUREMENT_POSE_VEL, DIM_STATE>(0, 0) = GPoseVel_;
     for (int i = 1; i < DIM_STATE; ++i) {
         QPoseVel_.block<DIM_MEASUREMENT_POSE_VEL, DIM_STATE>(i*DIM_MEASUREMENT_POSE_VEL, 0) = (
-            QPoseVel_.block<DIM_MEASUREMENT_POSE_VEL, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSE_VEL, 0) * F_
+                QPoseVel_.block<DIM_MEASUREMENT_POSE_VEL, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSE_VEL, 0) * F_
         );
     }
 
@@ -935,7 +935,7 @@ Eigen::MatrixXd ErrorStateKalmanFilter::GetQPosi(void) {
     // build observability matrix for position measurement:
     for (int i = 1; i < DIM_STATE; ++i) {
         QPosi_.block<DIM_MEASUREMENT_POSI, DIM_STATE>(i*DIM_MEASUREMENT_POSI, 0) = (
-            QPosi_.block<DIM_MEASUREMENT_POSI, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSI, 0) * F_
+                QPosi_.block<DIM_MEASUREMENT_POSI, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSI, 0) * F_
         );
     }
 
@@ -952,7 +952,7 @@ Eigen::MatrixXd ErrorStateKalmanFilter::GetQPosiVel(void) {
     QPosiVel_.block<DIM_MEASUREMENT_POSI_VEL, DIM_STATE>(0, 0) = GPosiVel_;
     for (int i = 1; i < DIM_STATE; ++i) {
         QPosiVel_.block<DIM_MEASUREMENT_POSI_VEL, DIM_STATE>(i*DIM_MEASUREMENT_POSI_VEL, 0) = (
-            QPosiVel_.block<DIM_MEASUREMENT_POSI_VEL, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSI_VEL, 0) * F_
+                QPosiVel_.block<DIM_MEASUREMENT_POSI_VEL, DIM_STATE>((i - 1)*DIM_MEASUREMENT_POSI_VEL, 0) * F_
         );
     }
 
@@ -965,8 +965,8 @@ Eigen::MatrixXd ErrorStateKalmanFilter::GetQPosiVel(void) {
  * @return void
  */
 void ErrorStateKalmanFilter::UpdateObservabilityAnalysis(
-    const double &time,
-    const MeasurementType &measurement_type
+        const double &time,
+        const MeasurementType &measurement_type
 ) {
     // get Q:
     Eigen::MatrixXd Q;
@@ -997,7 +997,7 @@ void ErrorStateKalmanFilter::UpdateObservabilityAnalysis(
  * @return void
  */
 bool ErrorStateKalmanFilter::SaveObservabilityAnalysis(
-    const MeasurementType &measurement_type
+        const MeasurementType &measurement_type
 ) {
     // get fusion strategy:
     std::string type;
@@ -1025,8 +1025,8 @@ bool ErrorStateKalmanFilter::SaveObservabilityAnalysis(
     std::vector<std::vector<double>> q_data, q_so_data;
 
     Eigen::MatrixXd Qso(
-        observability.Q_.size() * N,
-        DIM_STATE
+            observability.Q_.size() * N,
+            DIM_STATE
     );
     for (size_t i = 0; i < observability.Q_.size(); ++i) {
         const double &time = observability.time_.at(i);
