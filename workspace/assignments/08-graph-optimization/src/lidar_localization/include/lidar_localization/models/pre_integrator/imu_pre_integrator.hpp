@@ -19,10 +19,10 @@ namespace lidar_localization {
 
 class IMUPreIntegrator : public PreIntegrator {
 public:
-    static const int DIM_STATE = 15;
+    static int constexpr DIM_STATE{15};
 
-    typedef Eigen::Matrix<double, DIM_STATE, DIM_STATE> MatrixP;
-    typedef Eigen::Matrix<double, DIM_STATE, DIM_STATE> MatrixJ;
+    using MatrixP = Eigen::Matrix<double, DIM_STATE, DIM_STATE>;
+    using MatrixJ = Eigen::Matrix<double, DIM_STATE, DIM_STATE>;
 
     struct IMUPreIntegration {
         // time delta:
@@ -48,11 +48,11 @@ public:
         // c. Jacobian for update caused by bias:
         MatrixJ J_;
 
-        double GetT(void) const { return T_; }
+        double GetT() const { return T_; }
         
-        Eigen::Vector3d GetGravity(void) const { return g_; }
+        Eigen::Vector3d GetGravity() const { return g_; }
 
-        Vector15d GetMeasurement(void) const {
+        Vector15d GetMeasurement() const {
             Vector15d measurement = Vector15d::Zero();
 
             measurement.block<3, 1>(g2o::EdgePRVAGIMUPreIntegration::INDEX_P, 0) = alpha_ij_;
@@ -62,11 +62,11 @@ public:
             return measurement;
         }
 
-        Eigen::MatrixXd GetInformation(void) const {
+        Eigen::MatrixXd GetInformation() const {
             return P_.inverse();
         }
 
-        Eigen::MatrixXd GetJacobian(void) const {
+        Eigen::MatrixXd GetJacobian() const {
             return J_;
         }
     };
@@ -96,24 +96,24 @@ public:
     bool Reset(const IMUData &init_imu_data, IMUPreIntegration &imu_pre_integration);
 
 private:
-    static const int DIM_NOISE = 18;
+    static int constexpr DIM_NOISE{18};
 
-    static const int INDEX_ALPHA = 0;
-    static const int INDEX_THETA = 3;
-    static const int INDEX_BETA = 6;
-    static const int INDEX_B_A = 9;
-    static const int INDEX_B_G = 12;
+    static int constexpr INDEX_ALPHA{0};
+    static int constexpr INDEX_THETA{3};
+    static int constexpr INDEX_BETA{6};
+    static int constexpr INDEX_B_A{9};
+    static int constexpr INDEX_B_G{12};
 
-    static const int INDEX_M_ACC_PREV = 0;
-    static const int INDEX_M_GYR_PREV = 3;
-    static const int INDEX_M_ACC_CURR = 6;
-    static const int INDEX_M_GYR_CURR = 9;
-    static const int INDEX_R_ACC_PREV = 12;
-    static const int INDEX_R_GYR_PREV = 15;
+    static int constexpr INDEX_M_ACC_PREV{0};
+    static int constexpr INDEX_M_GYR_PREV{3};
+    static int constexpr INDEX_M_ACC_CURR{6};
+    static int constexpr INDEX_M_GYR_CURR{9};
+    static int constexpr INDEX_R_ACC_PREV{12};
+    static int constexpr INDEX_R_GYR_PREV{15};
 
-    typedef Eigen::Matrix<double, DIM_STATE, DIM_STATE> MatrixF;
-    typedef Eigen::Matrix<double, DIM_STATE, DIM_NOISE> MatrixB;
-    typedef Eigen::Matrix<double, DIM_NOISE, DIM_NOISE> MatrixQ;
+    using MatrixF = Eigen::Matrix<double, DIM_STATE, DIM_STATE>;
+    using MatrixB = Eigen::Matrix<double, DIM_STATE, DIM_NOISE>;
+    using MatrixQ = Eigen::Matrix<double, DIM_NOISE, DIM_NOISE>;
 
     // data buff:
     std::deque<IMUData> imu_data_buff_;
@@ -161,10 +161,6 @@ private:
     // process noise:
     MatrixQ Q_ = MatrixQ::Zero();
 
-    // process equation:
-    MatrixF F_ = MatrixF::Zero();
-    MatrixB B_ = MatrixB::Zero();
-
     /**
      * @brief  reset pre-integrator state using IMU measurements
      * @param  void
@@ -177,7 +173,7 @@ private:
      * @param  void
      * @return void
      */
-    void UpdateState(void);
+    void UpdateState();
 };
 
 } // namespace lidar_localization
